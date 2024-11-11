@@ -36,6 +36,7 @@ def simulate(num_tasks):
 
 
 if __name__ == "__main__":
+    # response time
     num_tasks_list = [40, 80, 160, 320, 640]
 
     for num_tasks in num_tasks_list:
@@ -48,3 +49,11 @@ if __name__ == "__main__":
     plt.ylabel('Response Time (arbitrary units)')
     plt.legend()
     plt.show()
+
+    # response time with specific criticality
+
+    # DMR
+
+    # DMR with specific criticality
+
+    # DMR with specific criticality and time
