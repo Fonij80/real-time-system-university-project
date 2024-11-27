@@ -2,27 +2,29 @@ from enum import Enum
 
 
 class CriticalityLevel(Enum):
-    S0 = "S0"
-    S1 = "S1"
-    S2 = "S2"
-    S3 = "S3"
+    S0 = 0
+    S1 = 1
+    S2 = 2
+    S3 = 3
 
 
 class Task:
-    def __init__(self, number_of_clocks: int, data_amount: float, deadline: str, criticality: CriticalityLevel):
-        self.number_of_clocks = number_of_clocks
-        self.data_amount = data_amount
-        self.deadline = deadline
-        self.criticality = criticality
+    def __init__(self, number_of_clocks: int, data_amount: float, deadline: int, criticality: CriticalityLevel):
+        self.number_of_clocks = number_of_clocks  # ci
+        self.data_amount = data_amount  # di
+        self.deadline = deadline  # Ti
+        self.criticality = criticality  # pi
 
 
 class Server:
     def __init__(self, processing_frequency: float, data_transmission_rate: float, number_of_cores: int,
-                 productivity: float):
-        self.processing_frequency = processing_frequency
-        self.data_transmission_rate = data_transmission_rate
-        self.number_of_cores = number_of_cores
-        self.productivity = productivity
+                 productivity: float = 0):
+        self.processing_frequency = processing_frequency  # fi
+        self.data_transmission_rate = data_transmission_rate  # vi
+        self.number_of_cores = number_of_cores  # zi
+        self.productivity = productivity  # ui
+        self.number_of_assigned_tasks = {CriticalityLevel.S0: 0, CriticalityLevel.S1: 0, CriticalityLevel.S2: 0,
+                                         CriticalityLevel.S3: 0}
 
 
 class BaseStation:
@@ -32,13 +34,25 @@ class BaseStation:
     def add_server(self, server):
         self.servers.append(server)
 
-    def allocate_task(self, task):
-        # Sort servers by productivity (least productive first)
+    def assign_task(self, task):
+        # assign tasks based on server productivity
         sorted_servers = sorted(self.servers, key=lambda s: s.productivity)
 
         for server in sorted_servers:
-            if server.productivity + task.clocks <= server.cores:
-                server.productivity += task.clocks
-                return True  # Task allocated successfully
+            if server.productivity + task.number_of_clocks <= server.number_of_cores:
+                server.productivity += task.number_of_clocks  # task assigned successfully
+                server.number_of_assigned_tasks[task.criticality] += 1
+                return 0
+            server.number_of_more_criticality_level = 0
+            for criticality, number_of_tasks in server.number_of_assigned_tasks.items():
+                if criticality.value >= task.criticality.value:
+                    server.number_of_more_criticality_level += number_of_tasks
 
-        return False  # No suitable server found
+        # no server can meet the task's deadline
+        sorted_servers = sorted(self.servers, key=lambda s: s.number_of_more_criticality_level)
+        sorted_servers[0].productivity += task.number_of_clocks  # task assigned successfully
+        sorted_servers[0].number_of_assigned_tasks[task.criticality] += 1
+        return 1
+
+    def assign_task_based_on_criticality(self, task):
+        pass
