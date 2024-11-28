@@ -7,5 +7,7 @@
 - Server Properties: processing frequency, data transmission rate, number of cores, productivity : mi = (fi, vi, zi, ui)
 - Server's productivity will be updated every time a task is assigned
 - Base Station store the number of tasks for each server based on the task criticality
-- Assign the received task to a server with least productivity
-- If task's productivuty + server's productivity > server's number of cores then the task can't be assigned to this server, because it won't meet the deadline
+- Assign the received task to a server with the least productivity
+- If task's productivity + server's productivity > server's number of cores then the task can't be assigned to this server, because it won't meet the deadline
+- In case of no server meet the deadline of task ti, assign ti to the server with the least number of tasks with criticality level more or equal than pi,
+when ti is assigned, all tasks with criticality less than pi will be suspended till completion of ti 
