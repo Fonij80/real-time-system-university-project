@@ -1,4 +1,5 @@
 from enum import Enum
+from fcntl import FASYNC
 
 
 class CriticalityLevel(Enum):
@@ -14,6 +15,14 @@ class Task:
         self.data_amount = data_amount  # di
         self.deadline = deadline  # Ti
         self.criticality = criticality  # pi
+        self.response_time = 0  # finish time - release time
+        self.is_missed = False
+
+    def execute(self):
+        pass
+
+    def suspend(self):
+        pass
 
 
 class Server:
