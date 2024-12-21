@@ -65,24 +65,29 @@ class Task:
 
     @staticmethod
     def reset_static_fields():
-        Task.task_count_based_on_criticality[CriticalityLevel.S0] = CriticalityStats()
-        Task.task_count_based_on_criticality[CriticalityLevel.S1] = CriticalityStats()
-        Task.task_count_based_on_criticality[CriticalityLevel.S2] = CriticalityStats()
-        Task.task_count_based_on_criticality[CriticalityLevel.S3] = CriticalityStats()
+        Task.task_count_based_on_criticality = {
+            CriticalityLevel.S0: CriticalityStats(),
+            CriticalityLevel.S1: CriticalityStats(),
+            CriticalityLevel.S2: CriticalityStats(),
+            CriticalityLevel.S3: CriticalityStats()
+        }
 
-    def execute(self):
-        pass
-
-    def suspend(self):
-        pass
+    def execute(self, current_time):
+        finish_time = current_time + self.execution_time
+        self.response_time = finish_time - self.arrival_time
+        Task.task_count_based_on_criticality[self.criticality].sum_response_time(self.response_time)
+        return finish_time
 
     def get_execution_time(self, server):
+        """محاسبه زمان اجرا بر اساس فرکانس سرور"""
         return self.number_of_clocks / server.processing_frequency
 
     def get_sending_delay_to_server(self, server):
+        """محاسبه تأخیر ارسال داده‌ها به سرور"""
         return self.data_amount / server.data_transmission_rate
 
     def get_productivity(self, server):
+        """محاسبه بهره‌وری وظیفه بر روی یک سرور"""
         return self.get_execution_time(server) / self.deadline
 
 
@@ -101,54 +106,30 @@ class Server:
                                          CriticalityLevel.S3: 0}
         self.assigned_tasks = []
 
-    def __str__(self):
-        return f"Server {self.id}, Productivity: {self.productivity}"
-
     def assign_task(self, task):
         self.assigned_tasks.append(task)  # task assigned successfully
         self.update_productivity()
         self.number_of_assigned_tasks[task.criticality] += 1
-        task.arrival_time += task.get_sending_delay_to_server(self)  # update task arrival_time based on transmission's delay between base station and server
         task.execution_time = task.number_of_clocks / self.processing_frequency
 
     def update_productivity(self):
         self.productivity = sum(t.productivity for t in self.assigned_tasks)
 
     def executeTasks(self, isCriticalityConsidered=False):
-        # execute tasks based on FIFO
         sorted_tasks_based_on_arrival_time = sorted(self.assigned_tasks, key=lambda t: t.arrival_time)
-        print(f"cccccc: {len(sorted_tasks_based_on_arrival_time)}")
         current_time = 0
-        arrived_tasks = []
-        while len(sorted_tasks_based_on_arrival_time) != 0:
-            # print(f"current time {current_time}")
-            for task in sorted_tasks_based_on_arrival_time:
-                print(f"arrive at: {task.arrival_time}")
-                if task.arrival_time == current_time:
-                    arrived_tasks.append(task)
-
-            for task in arrived_tasks:
-                if not isCriticalityConsidered:
-                    # Check if the deadline will be missed
-                    if current_time + task.execution_time > task.deadline:
-                        task.is_missed = True
-                        Task.task_count_based_on_criticality[task.criticality].count_missed_task()
-                        arrived_tasks.remove(task)
-                        sorted_tasks_based_on_arrival_time.remove(task)
-                        continue  # don't execute the task and go to next arrived task
-
-                    current_time += task.execution_time  # finish time
-                    task.response_time = current_time - task.arrival_time
-                    Task.task_count_based_on_criticality[task.criticality].sum_response_time(task.response_time)
-                    arrived_tasks.remove(task)  # task executed successfully
-                    sorted_tasks_based_on_arrival_time.remove(task)
-                    print(f'{current_time} , {task.execution_time}')
-                    # Update server's productivity after executing the task
-                    self.update_productivity()
-
-                else:  # execute based on criticality level
-                    sorted_arrived_tasks_based_on_criticality = sorted(arrived_tasks, key=lambda t: t.criticality.level)
-                    # TODO complete execution based on criticality level
+        while sorted_tasks_based_on_arrival_time:
+            if isCriticalityConsidered:
+                # Sort based on criticality level first
+                sorted_tasks_based_on_arrival_time = sorted(sorted_tasks_based_on_arrival_time,
+                                                            key=lambda t: t.criticality.level)
+            task = sorted_tasks_based_on_arrival_time.pop(0)
+            if current_time + task.execution_time > task.deadline:
+                task.is_missed = True
+                Task.task_count_based_on_criticality[task.criticality].count_missed_task()
+                continue
+            current_time = task.execute(current_time)
+            self.update_productivity()
 
 
 class BaseStation:
@@ -162,20 +143,8 @@ class BaseStation:
         # assign tasks based on server productivity
         sorted_servers_based_on_productivity = sorted(self.servers, key=lambda s: s.productivity)
 
-        for i in range(len(tasks)):
+        for task in tasks:
             for server in sorted_servers_based_on_productivity:
-                if server.productivity + tasks[i].get_productivity(server) <= server.number_of_cores:
-                    server.assign_task(tasks[i])
-                    break  # go to next task
-                elif not isCriticalityLevelConsidered:  # no server can meet the task's deadline
-                    sorted_servers_based_on_productivity[0].assign_task(
-                        tasks[i])  # assign task to server with the least productivity
-                    break  # go to next task
-                else:  # schedule based on criticality level
-                    server.number_of_more_criticality_level = 0
-                    for criticality, number_of_tasks in server.number_of_assigned_tasks.items():
-                        if criticality.value >= tasks[i].criticality.value:
-                            server.number_of_more_criticality_level += number_of_tasks
-                    # choose server with the least number of tasks with criticality more or equal to current task
-                    sorted_servers = sorted(self.servers, key=lambda s: s.number_of_more_criticality_level)
-                    sorted_servers[0].assign_task(tasks[i])
+                if server.productivity + task.get_productivity(server) <= server.number_of_cores:
+                    server.assign_task(task)
+                    break
