@@ -197,3 +197,4 @@ class BaseStation:
                     # choose server with the least number of tasks with criticality more or equal to current task
                     sorted_servers = sorted(self.servers, key=lambda s: s.number_of_more_criticality_level)
                     sorted_servers[0].assign_task(tasks[i])
+                    print(f"Task {tasks[i].id} assigned to Server {server.id}, Considered Criticality")
