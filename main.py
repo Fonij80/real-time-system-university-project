@@ -14,7 +14,7 @@ def generate_tasks(number_of_tasks, criticality_level=None):
 
     for i in range(number_of_tasks):
         number_of_clocks = random.randint(1, 10) * 10
-        data_amount = int(random.uniform(10.0, 500.0))  # MB
+        data_amount = int(random.uniform(500.0, 1000.0))  # bit
         deadline = random.randint(i, 1000)
         criticality = criticality_level if criticality_level is not None else random.choice(list(CriticalityLevel))
         tasks.append(Task(number_of_clocks, data_amount, deadline, criticality, i))
@@ -35,14 +35,15 @@ def initialize_base_station(number_of_servers):
 
     # generate servers
     for i in range(number_of_servers):
-        processing_frequency = int(random.uniform(1.0, 3.5))  # GHz
-        data_transmission_rate = int(random.uniform(100.0, 1000.0))  # Mbps
+        # how many cycles per second server can process
+        processing_frequency = random.randint(1, 10)  # Hz
+        data_transmission_rate = int(random.uniform(10.0, 100.0))  # bps
         number_of_cores = random.randint(1, 5)
-        station.add_server(Server(processing_frequency, data_transmission_rate, number_of_cores))
-
-    for s in station.servers:
+        s = Server(processing_frequency, data_transmission_rate, number_of_cores)
+        station.add_server(s)
         print(f"server: {s.id}, freq: {s.processing_frequency}, trans rate: {s.data_transmission_rate}, "
               f"cors: {s.number_of_cores}")
+
     return station
 
 

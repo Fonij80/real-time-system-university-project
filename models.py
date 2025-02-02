@@ -81,10 +81,10 @@ class Task:
         Task.task_count_based_on_criticality[CriticalityLevel.S3] = CriticalityStats()
 
     def get_execution_time(self, server):
-        return int(self.number_of_clocks / server.processing_frequency)
+        return int(self.number_of_clocks / server.processing_frequency)  # second
 
     def get_sending_delay_to_server(self, server):
-        return int(self.data_amount / server.data_transmission_rate)
+        return int(self.data_amount / server.data_transmission_rate)  # second
 
     def get_productivity(self, server):
         return round(self.get_execution_time(server) / self.deadline, 2) * 10
@@ -176,7 +176,7 @@ class BaseStation:
         for i in range(len(tasks)):
             # assign tasks based on server productivity
             sorted_servers_based_on_productivity = sorted(self.servers, key=lambda s: s.productivity)
-            print(f"Task: {tasks[i].id}, clocks: {tasks[i].number_of_clocks}, arrival: {tasks[i].arrival_time}")
+            print(f"Task: {tasks[i].id}, clocks: {tasks[i].number_of_clocks}, arrival: {tasks[i].arrival_time}, deadline: {tasks[i].deadline}")
             for server in sorted_servers_based_on_productivity:
                 print(f"Server: {server.id}, productivity: {server.productivity}")
                 if server.productivity + tasks[i].get_productivity(server) <= server.number_of_cores:
