@@ -31,13 +31,15 @@ class CriticalityStats:
         self.task_count = 0
         self.total_response_time = 0
         self.missed_count = 0
+        self.tasks = []
 
-    def count_number_of_task(self):
+    def count_number_of_task(self, task):
         self.task_count += 1
+        self.tasks.append(task)
+
 
     def sum_response_time(self, response_time):
         self.total_response_time += response_time
-
     def count_missed_task(self):
         self.missed_count += 1
 
@@ -66,7 +68,7 @@ class Task:
         self.response_time = 0  # finish time - arrival time
         self.is_missed = False
         self.server = None
-        Task.task_count_based_on_criticality[criticality].count_number_of_task()
+        Task.task_count_based_on_criticality[criticality].count_number_of_task(self)
 
     def __str__(self):
         return (f"Task {self.id}, Productivity: {self.productivity}, Assigned Server: {self.server.id}, "
@@ -94,6 +96,9 @@ class Task:
         self.execution_time = self.number_of_clocks / server.processing_frequency
         self.server = server
         self.productivity = self.get_productivity(server)
+
+    def calculate_laxity(self):
+        return self.deadline - self.arrival_time - self.execution_time
 
 
 class Server:
@@ -160,8 +165,32 @@ class Server:
 
                 else:  # Execute based on criticality level
                     sorted_arrived_tasks_based_on_criticality = sorted(arrived_tasks, key=lambda t: t.criticality.level)
-                    # TODO
-                    return
+                    # Process the most critical task
+                    most_critical_task = sorted_arrived_tasks_based_on_criticality[0]
+                    # Calculate Laxity for the most critical task
+                    laxity = most_critical_task.deadline - most_critical_task.arrival_time - most_critical_task.execution_time
+                    if laxity < 0:
+                        most_critical_task.is_missed = True
+                        Task.task_count_based_on_criticality[most_critical_task.criticality].count_missed_task()
+                        arrived_tasks.remove(most_critical_task)  # Remove missed task from arrived tasks
+                        print(f'Task {most_critical_task.id} missed due to negative laxity')
+                        continue  # Skip the current most critical task and continue processing the next task
+
+                    # Execute 1 unit of the most critical task
+                    most_critical_task.execution_time -= 1
+                    current_time += 1  # Increment current time by 1 unit
+                    print(
+                        f'Executing 1 unit of Task {most_critical_task.id}, remaining execution time: {most_critical_task.execution_time}')
+                    if most_critical_task.execution_time <= 0:
+                        # If the task is finished, remove it from the arrived tasks list
+                        arrived_tasks.remove(most_critical_task)
+                        most_critical_task.response_time = current_time - most_critical_task.arrival_time
+                        Task.task_count_based_on_criticality[most_critical_task.criticality].sum_response_time(
+                            most_critical_task.response_time)
+                        self.update_productivity()  # Update server's productivity after task execution
+                        print(f'Task {most_critical_task.id} finished at: {current_time}')
+
+                    break  # Stop further processing until the next round
 
 
 class BaseStation:

@@ -2,6 +2,10 @@
 # Fatemeh Sadat Lajevardi - 400105217
 from models import Task, Server, BaseStation, CriticalityLevel
 import random
+import matplotlib
+import copy
+matplotlib.use('TkAgg')
+
 from matplotlib import pyplot as plt
 
 arrival_time_counter = 0
@@ -29,6 +33,8 @@ def generate_tasks_based_on_criticality(number_of_tasks_based_on_criticality):
 
     return tasks
 
+def calculate_Ltotal():
+    return sum(task.calculate_laxity() for level in CriticalityLevel for task in tasks if task.criticality == level)
 
 def initialize_base_station(number_of_servers):
     station = BaseStation()
@@ -91,57 +97,72 @@ def plot_deadline_miss_ratio_by_criticality_level(label):
     plt.show()
 
 
+def plot_laxity_by_criticality_level(label, tasks):
+    avg_laxities = []
+    for level in CriticalityLevel:
+        total_laxity = 0
+        task_count = Task.task_count_based_on_criticality[level].task_count
+        if task_count > 0:
+            for task in tasks:
+                if task.criticality == level:
+                    total_laxity += task.calculate_laxity()
+            avg_laxities.append(total_laxity / task_count)
+        else:
+            avg_laxities.append(0)
+
+    plt.figure(figsize=(10, 6))
+    plt.bar([level.name for level in CriticalityLevel], avg_laxities,
+            color=['red', 'orange', 'green', 'blue'])
+    plt.title(f'Average Laxity by Criticality Level, {label}')
+    plt.xlabel('Criticality Level')
+    plt.ylabel('Average Laxity')
+    plt.xticks(rotation=45)
+    plt.grid(axis='y')
+    plt.show()
+
+
+def plot_laxity_by_criticality_level(label, tasks):
+    avg_laxities = []
+    for level in CriticalityLevel:
+        total_laxity = 0
+        task_count = sum(1 for task in tasks if task.criticality == level)  # شمارش تعداد وظایف مربوط به هر سطح بحرانیت
+        if task_count > 0:
+            for task in tasks:
+                if task.criticality == level:
+                    total_laxity += task.calculate_laxity()
+            avg_laxities.append(total_laxity / task_count)
+        else:
+            avg_laxities.append(0)
+
+    plt.figure(figsize=(10, 6))
+    plt.bar([level.name for level in CriticalityLevel], avg_laxities,
+            color=['red', 'orange', 'green', 'blue'])
+    plt.title(f'Average Laxity by Criticality Level, {label}')
+    plt.xlabel('Criticality Level')
+    plt.ylabel('Average Laxity')
+    plt.xticks(rotation=45)
+    plt.grid(axis='y')
+    plt.show()
+
+
 if __name__ == "__main__":
     number_of_servers = 4
 
-    # Phase 1 Outputs: Ignoring Criticality Level
     for number in [40, 80, 160, 320, 640]:
-        tasks = generate_tasks(number)
-        simulate(number_of_servers, tasks)
-        plot_response_time_by_criticality_level(label=f"for {number} tasks, Ignored Criticality")
-        plot_deadline_miss_ratio_by_criticality_level(label=f"for {number} tasks, Ignored Criticality")
+        original_tasks = generate_tasks(number)
 
-    # 320 tasks: S0: 80, S1: 80, S2: 80, S3: 80
-    number_of_tasks_based_on_criticality = {CriticalityLevel.S0: 80, CriticalityLevel.S1: 80,
-                                            CriticalityLevel.S2: 80,
-                                            CriticalityLevel.S3: 80}
-    generate_tasks_based_on_criticality(number_of_tasks_based_on_criticality)
-    simulate(number_of_servers, tasks, isCriticalityLevelConsidered=True)
-    plot_response_time_by_criticality_level(
-        label="for 320 tasks: S0: 80, S1: 80, S2: 80, S3: 80 tasks, Considered Criticality")
-    plot_deadline_miss_ratio_by_criticality_level(
-        label="for 320 tasks: S0: 80, S1: 80, S2: 80, S3: 80 tasks, Considered Criticality")
+        tasks_without_criticality = copy.deepcopy(original_tasks)
+        tasks_with_criticality = copy.deepcopy(original_tasks)
 
-    # TODO
-    # Deadline Miss Ratio By Criticality with Ltotal / 40
-    # Deadline Miss Ratio By Criticality with Ltotal / 20
-    # Deadline Miss Ratio By Criticality with Ltotal / 5
+        print(f"Simulating for {number} tasks without considering criticality...")
+        simulate(number_of_servers, tasks_without_criticality, isCriticalityLevelConsidered=False)
+        plot_response_time_by_criticality_level(f"for {number} tasks, Ignored Criticality")
+        plot_deadline_miss_ratio_by_criticality_level(f"for {number} tasks, Ignored Criticality")
 
-    # 320 tasks: S0: 100, S1: 80, S2: 80, S3: 60
-    number_of_tasks_based_on_criticality = {CriticalityLevel.S0: 100, CriticalityLevel.S1: 80,
-                                            CriticalityLevel.S2: 80,
-                                            CriticalityLevel.S3: 60}
-    generate_tasks_based_on_criticality(number_of_tasks_based_on_criticality)
-    simulate(number_of_servers, tasks, isCriticalityLevelConsidered=True)
-    plot_response_time_by_criticality_level(
-        label="for 320 tasks: S0: 100, S1: 80, S2: 80, S3: 60 tasks, Considered Criticality")
-    plot_deadline_miss_ratio_by_criticality_level(
-        label="for 320 tasks: S0: 100, S1: 80, S2: 80, S3: 60 tasks, Considered Criticality")
+        print(f"Simulating for {number} tasks considering criticality...")
+        simulate(number_of_servers, tasks_with_criticality, isCriticalityLevelConsidered=True)
+        plot_response_time_by_criticality_level(f"for {number} tasks, Considered Criticality")
+        plot_deadline_miss_ratio_by_criticality_level(f"for {number} tasks, Considered Criticality")
 
-    # 320 tasks: S0: 150, S1: 80, S2: 80, S3: 10
-    number_of_tasks_based_on_criticality = {CriticalityLevel.S0: 150, CriticalityLevel.S1: 80,
-                                            CriticalityLevel.S2: 80,
-                                            CriticalityLevel.S3: 10}
-    generate_tasks_based_on_criticality(number_of_tasks_based_on_criticality)
-    simulate(number_of_servers, tasks, isCriticalityLevelConsidered=True)
-    plot_response_time_by_criticality_level(
-        label="for 320 tasks: S0: 150, S1: 80, S2: 80, S3: 10 tasks, Considered Criticality")
-    plot_deadline_miss_ratio_by_criticality_level(
-        label="for 320 tasks: S0: 150, S1: 80, S2: 80, S3: 10 tasks, Considered Criticality")
-
-    # Phase 2 Outputs: Considering Criticality Level
-    for number in [40, 80, 160, 320, 640]:
-        tasks = generate_tasks(number)
-        simulate(number_of_servers, tasks, isCriticalityLevelConsidered=True)
-        plot_response_time_by_criticality_level(label=f"for {number} tasks, Considered Criticality")
-        plot_deadline_miss_ratio_by_criticality_level(label=f"for {number} tasks, Considered Criticality")
+        # اصلاح فراخوانی تابع بدون ارسال نام آرگومان (ارسال به‌صورت positional argument)
+        plot_laxity_by_criticality_level(f"for {number} tasks, Considered Criticality", tasks_with_criticality)
